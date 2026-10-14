@@ -11,7 +11,7 @@
 [![macOS](https://img.shields.io/badge/macOS-14%2B-0D9488?logo=apple&logoColor=white)](#安装)
 [![Swift](https://img.shields.io/badge/Swift-Native-F05138?logo=swift&logoColor=white)](#从源码构建)
 [![License](https://img.shields.io/badge/License-MIT-0D9488)](LICENSE)
-[![Build](https://github.com/arronfan23/scrollcap/actions/workflows/ci.yml/badge.svg)](https://github.com/arronfan23/scrollcap/actions/workflows/ci.yml)
+[![Build](https://github.com/arronfan23/scrollcap/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/arronfan23/scrollcap/actions/workflows/ci.yml)
 
 [下载安装包](https://github.com/arronfan23/scrollcap/releases/latest) · [使用指南](docs/USER_GUIDE.zh-CN.md) · [English](README.en.md) · [反馈问题](https://github.com/arronfan23/scrollcap/issues/new/choose)
 

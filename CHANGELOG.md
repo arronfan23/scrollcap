@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.1.0 — 2026-10-14
+## 2.1.0 — 2026-10-15
 
 - 首次 GitHub 公开发布，采用 MIT 许可证。
 - 加入 ScrollCap 新 Logo、macOS 应用图标与品牌素材。

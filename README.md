@@ -42,7 +42,14 @@ ScrollCap 是一款原生 macOS 长截图工具，适合网页、聊天记录和
 
 从旧版「长截图2」迁移时，请给新应用 **ScrollCap** 单独授权。
 
-需要 macOS 14 或更新版本。当前本机发布包适用于 **Apple 芯片（arm64）**；源码也支持为 Intel Mac 构建。发布包使用本地签名，尚未进行 Apple Developer ID 签名与公证。
+需要 macOS 14 或更新版本。下载时按设备选择：
+
+| Mac 类型 | 安装包 |
+| --- | --- |
+| Apple 芯片 | `ScrollCap-2.1.0-macOS-arm64.dmg` |
+| Intel | `ScrollCap-2.1.0-macOS-x86_64.dmg` |
+
+发布包使用本地签名，尚未进行 Apple Developer ID 签名与公证。
 
 > 自动滚动还需要辅助功能权限。手动滚动及视频导入都不需要辅助功能权限。
 

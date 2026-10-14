@@ -4,7 +4,7 @@
 
 ## 安装
 
-打开「ScrollCap-2.1.0-macOS-arm64.dmg」，把「ScrollCap.app」拖到 Applications。适用于 Apple 芯片 Mac、macOS 14 或更新版本。旧版「长截图」可以保留。
+按设备下载 arm64（Apple 芯片）或 x86_64（Intel）安装包，打开 DMG，把「ScrollCap.app」拖到 Applications。需要 macOS 14 或更新版本。旧版「长截图」可以保留。
 
 首次框选屏幕时，按提示在系统设置 → 隐私与安全性 → 屏幕与系统音频录制中允许「ScrollCap」。如系统要求，退出并重新打开应用。**手动模式不需要辅助功能权限**；自动滚动才需要相应权限。
 

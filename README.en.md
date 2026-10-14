@@ -27,7 +27,7 @@ ScrollCap is a native macOS utility for long screenshots of web pages and chat w
 
 ## Install and use
 
-Requires **macOS 14+**. The initial downloadable package is for **Apple silicon (arm64)**. The source can also build for Intel Macs. Current packages are ad hoc signed, without Apple Developer ID signing or notarization.
+Requires **macOS 14+**. Choose the **arm64** package for Apple silicon or **x86_64** for Intel Macs. Current packages are ad hoc signed, without Apple Developer ID signing or notarization.
 
 Download the DMG from [Releases](https://github.com/arronfan23/scrollcap/releases/latest), drag **ScrollCap.app** into Applications, then enable screen-recording access for that app. **Quit and relaunch after granting permission** so the running process sees the updated authorization. Automatic scrolling additionally requires Accessibility access; manual scrolling does not.
 

@@ -1,0 +1,16 @@
+name: Feature request / 功能建议
+description: 描述你希望支持的使用场景
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 使用场景与当前困难
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 希望的行为
+      description: 可以说明适用窗口、滚动方式或输出形式。

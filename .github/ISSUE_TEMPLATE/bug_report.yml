@@ -1,0 +1,32 @@
+name: Bug report / 问题反馈
+description: 反馈录制、权限或拼接问题
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: input
+    id: environment
+    attributes:
+      label: 系统与版本
+      description: macOS 版本、Apple 芯片或 Intel、ScrollCap 版本
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: 使用方式
+      options:
+        - 手动滚动
+        - 自动滚动
+        - 导入视频
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 复现步骤、预期结果与实际结果
+      description: 请注明滚动方向；权限问题请注明授权后是否完全退出并重启。
+    validations:
+      required: true
+  - type: textarea
+    id: sample
+    attributes:
+      label: 可选的脱敏素材
+      description: 无需上传私人聊天记录。分享前请检查是否包含个人信息。

@@ -46,7 +46,7 @@ enum MatchResult: Equatable {
 }
 
 enum Stitcher {
-    static func match(_ previous: SampleFrame, _ current: SampleFrame, upward: Bool) -> MatchResult {
+    static func match(_ previous: SampleFrame, _ current: SampleFrame, upward: Bool, maximumShift: Int? = nil) -> MatchResult {
         guard previous.height == current.height else { return .uncertain("窗口尺寸发生变化") }
         let h = previous.height, w = previous.width
         guard h >= 100 else { return .uncertain("选区太矮，请框选更大的正文区域") }
@@ -59,7 +59,7 @@ enum Stitcher {
             }
         }
         if unchanged / Double(sameCount) < 0.85 { return .unchanged }
-        let maxShift = h * 78 / 100
+        let maxShift = min(h * 78 / 100, max(1, maximumShift ?? h))
         func score(_ shift: Int) -> Double {
             let overlap = h - shift
             var error = 0.0, rows = 0
@@ -67,7 +67,7 @@ enum Stitcher {
             for y in stride(from: 3, to: overlap - 3, by: step) {
                 let py = upward ? y : y + shift
                 let cy = upward ? y + shift : y
-                if previous.texture[py] < 22 || current.texture[cy] < 22 { continue }
+                if previous.texture[py] < 22 && current.texture[cy] < 22 { continue }
                 var rowError = 0.0
                 for x in stride(from: 6, to: w - 8, by: 2) {
                     rowError += Double(abs(Int(previous.pixels[py * w + x]) - Int(current.pixels[cy * w + x])))

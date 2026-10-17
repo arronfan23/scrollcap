@@ -16,7 +16,7 @@ body:
       label: 使用方式
       options:
         - 手动滚动
-        - 自动滚动
+        - 预览裁剪
         - 导入视频
   - type: textarea
     id: reproduction

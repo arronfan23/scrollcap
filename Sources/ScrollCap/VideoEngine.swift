@@ -10,8 +10,8 @@ struct VideoKey: Codable {
     let sharpness: Double
 }
 struct VideoReport: Codable {
-    var version = 2
-    var engine = "Apple Vision OCR + image registration + verified original-frame seams"
+    var version = 4
+    var engine = "original-resolution pixel alignment + Apple Vision OCR + verified original-frame seams"
     var direction: String
     var sourceDuration: Double
     var analyzedFrames: Int
@@ -24,6 +24,9 @@ struct VideoReport: Codable {
     var fixedTopHeight: Int = 0
     var fixedBottomHeight: Int = 0
     var scrollingCrop: CGRect? = nil
+    var verifiedThrough: Double? = nil
+    var cropAdjustment: String? = nil
+    var maximumPixelsPerSecond: Double? = nil
 }
 struct VideoResult {
     let image: CGImage
@@ -33,14 +36,12 @@ struct VideoResult {
 
 struct VideoFrame {
     let image: CGImage
-    let small: CGImage
-    let coarse: SampleFrame
     let fine: SampleFrame
     let seconds: Double
     let sharpness: Double
     init?(_ image: CGImage, seconds: Double) {
-        guard let small = VideoVision.resize(image, maxHeight: 480), let coarse = SampleFrame(small), let fine = SampleFrame(image) else { return nil }
-        self.image = image; self.small = small; self.coarse = coarse; self.fine = fine; self.seconds = seconds
+        guard let fine = SampleFrame(image) else { return nil }
+        self.image = image; self.fine = fine; self.seconds = seconds
         var sum = 0.0, count = 0
         for y in stride(from: 2, to: fine.height - 2, by: max(1, fine.height / 250)) {
             for x in stride(from: 8, to: 86, by: 2) {
@@ -73,15 +74,17 @@ enum VideoVision {
         var rowErrors: [Double] = []
         for row in stride(from: 4, to: overlap - 4, by: max(1, overlap / 150)) {
             let py = upward ? row : row + shift, cy = upward ? row + shift : row
-            if a.texture[py] < 20 || b.texture[cy] < 20 { continue }
+            // A heading aligned with whitespace is evidence against a match.
+            // Ignoring either low-texture side lets repeated separators win.
+            if a.texture[py] < 20 && b.texture[cy] < 20 { continue }
             var e = 0.0
             for x in stride(from: 6, to: 88, by: 2) { e += Double(abs(Int(a.pixels[py * 96 + x]) - Int(b.pixels[cy * 96 + x]))) }
             rowErrors.append(e / 41)
         }
         guard rowErrors.count >= 6 else { return .infinity }
-        rowErrors.sort()
-        let n = max(6, rowErrors.count * 4 / 5)
-        return rowErrors.prefix(n).reduce(0, +) / Double(n)
+        // Sparse layouts may put all distinguishing text in the worst 20% of
+        // rows. Those rows must not be discarded as outliers.
+        return rowErrors.reduce(0, +) / Double(rowErrors.count)
     }
     static func refine(_ a: SampleFrame, _ b: SampleFrame, expected: Int, radius: Int, upward: Bool) -> Int? {
         let low = max(0, expected - radius), high = min(a.height * 78 / 100, expected + radius)
@@ -93,29 +96,19 @@ enum VideoVision {
         }
         return best.score < 7.5 ? best.shift : nil
     }
-    static func alignment(_ a: VideoFrame, _ b: VideoFrame, upward: Bool) -> MatchResult {
+    static func alignment(_ a: VideoFrame, _ b: VideoFrame, upward: Bool, maximumShift: Int? = nil) -> MatchResult {
         if difference(a.fine, b.fine) < 0.45 { return .unchanged }
-        let coarse = Stitcher.match(a.coarse, b.coarse, upward: upward)
-        if case .shifted(let shift) = coarse {
-            let guess = Int((Double(shift) * Double(a.image.height) / Double(a.small.height)).rounded())
-            if let exact = refine(a.fine, b.fine, expected: guess, radius: 7, upward: upward) {
+        // Reduced-height matching can choose another copy of a separator and
+        // then trap local refinement around that wrong displacement. Search all
+        // original-resolution displacements before accepting any local match.
+        let match = Stitcher.match(a.fine, b.fine, upward: upward, maximumShift: maximumShift)
+        if case .shifted(let shift) = match {
+            if let exact = refine(a.fine, b.fine, expected: shift, radius: 2, upward: upward) {
                 return exact > 0 ? .shifted(exact) : .unchanged
             }
         }
-        if case .unchanged = coarse, let tiny = refine(a.fine, b.fine, expected: 2, radius: 6, upward: upward) {
+        if case .unchanged = match, let tiny = refine(a.fine, b.fine, expected: 2, radius: 6, upward: upward) {
             return tiny > 0 ? .shifted(tiny) : .unchanged
-        }
-        // Vision proposes a displacement; pixel agreement must independently confirm it.
-        let request = VNTranslationalImageRegistrationRequest(targetedCGImage: a.small, options: [:])
-        if (try? VNImageRequestHandler(cgImage: b.small, options: [:]).perform([request])) != nil,
-           let alignment = request.results?.first {
-            let transform = alignment.alignmentTransform
-            if abs(transform.tx) <= 3 {
-                let guess = Int((abs(transform.ty) * CGFloat(a.image.height) / CGFloat(a.small.height)).rounded())
-                if let exact = refine(a.fine, b.fine, expected: guess, radius: 10, upward: upward), exact > 0 {
-                    return .shifted(exact)
-                }
-            }
         }
         return .uncertain("视频画面缺少可靠重叠，或滚动方向发生变化")
     }
@@ -167,12 +160,48 @@ enum VideoEngine {
         let result = try await generator.image(at: .zero)
         return result.image
     }
+    static func resolveFixedCrop(asset: AVAsset, duration: Double, crop: CGRect, cover: CGImage, cancel: CancelFlag) async throws -> (CGRect, String?) {
+        guard crop.minX == 0, Int(crop.width) == cover.width else { return (crop, nil) }
+        let top = CGRect(x: 0, y: 0, width: CGFloat(cover.width), height: crop.minY)
+        let bottom = CGRect(x: 0, y: crop.maxY, width: CGFloat(cover.width), height: CGFloat(cover.height) - crop.maxY)
+        guard top.height > 0 || bottom.height > 0 else { return (crop, nil) }
+        let generator = AVAssetImageGenerator(asset: asset)
+        generator.appliesPreferredTrackTransform = true
+        generator.requestedTimeToleranceBefore = CMTime(seconds: 0.05, preferredTimescale: 600)
+        generator.requestedTimeToleranceAfter = CMTime(seconds: 0.05, preferredTimescale: 600)
+        func changed(_ image: CGImage, rect: CGRect) -> Bool {
+            guard rect.height > 0, let a = cover.cropping(to: rect), let b = image.cropping(to: rect),
+                  let before = SampleFrame(a), let after = SampleFrame(b) else { return false }
+            // Ignore a blinking caret or small spinner in a genuinely fixed bar.
+            return AutoScrollProgress.stillDifference(before, after) > 3.0
+        }
+        var topChanges = 0, bottomChanges = 0
+        for fraction in [0.3, 0.6, 0.9] {
+            try cancel.check()
+            guard let sample = try? await generator.image(at: CMTime(seconds: duration * fraction, preferredTimescale: 600)),
+                  sample.image.width == cover.width, sample.image.height == cover.height else { continue }
+            if changed(sample.image, rect: top) { topChanges += 1 }
+            if changed(sample.image, rect: bottom) { bottomChanges += 1 }
+        }
+        guard topChanges >= 2 || bottomChanges >= 2 else { return (crop, nil) }
+        let start = topChanges >= 2 ? 0 : crop.minY
+        let end = bottomChanges >= 2 ? CGFloat(cover.height) : crop.maxY
+        let parts = topChanges >= 2 && bottomChanges >= 2 ? "顶部和底部" : (topChanges >= 2 ? "顶部" : "底部")
+        return (CGRect(x: 0, y: start, width: crop.width, height: end - start), "检测到标记的\(parts)也在滚动，已自动纳入正文，避免首尾重复。")
+    }
     static func process(url: URL, crop: CGRect?, upward: Bool, directory: URL, cancel: CancelFlag,
-                        progress: @Sendable (Double, String) -> Void, fixedCover: CGImage? = nil, includeFixed: Bool = false) async throws -> VideoResult {
+                        progress: @Sendable (Double, String) -> Void, fixedCover: CGImage? = nil, includeFixed: Bool = false,
+                        maximumPixelsPerSecond: Double? = nil) async throws -> VideoResult {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let asset = AVURLAsset(url: url)
         let duration = try await asset.load(.duration).seconds
         guard duration.isFinite, duration > 0, duration <= 305 else { throw CaptureError.message("请导入 5 分钟以内的视频，较长录制请先分段") }
+        var crop = crop
+        var cropAdjustment: String?
+        if includeFixed, let selection = crop, let cover = fixedCover {
+            progress(0.005, "检查固定区域是否随页面滚动…")
+            (crop, cropAdjustment) = try await resolveFixedCrop(asset: asset, duration: duration, crop: selection, cover: cover, cancel: cancel)
+        }
         guard let track = try await asset.loadTracks(withMediaType: .video).first else { throw CaptureError.message("此文件没有视频画面") }
         let transform = try await track.load(.preferredTransform)
         let reader = try AVAssetReader(asset: asset)
@@ -190,7 +219,6 @@ enum VideoEngine {
         var pending: (frame: VideoFrame, position: Int)?
         var finalCandidate: (frame: VideoFrame, position: Int)?
         var frameCount = 0
-        var lastSampleTime = -1.0
         var lastGoodTime = 0.0
         var warning: String?
         var stoppedForGap = false
@@ -220,8 +248,8 @@ enum VideoEngine {
             nextSample = output.copyNextSampleBuffer()
             try cancel.check()
             let seconds = CMSampleBufferGetPresentationTimeStamp(sample).seconds
-            if seconds - lastSampleTime < 0.115 && nextSample != nil { continue }
-            lastSampleTime = seconds
+            // Every encoded frame can bridge a quick manual scroll. Dropping intermediate
+            // frames here can turn a fully covered recording into an apparent content gap.
             let frame: VideoFrame? = autoreleasepool {
                 guard let pixels = CMSampleBufferGetImageBuffer(sample) else { return nil }
                 var ci = CIImage(cvPixelBuffer: pixels).transformed(by: transform)
@@ -235,9 +263,13 @@ enum VideoEngine {
             frameCount += 1
             if frameCount % 8 == 0 { progress(min(0.72, seconds / duration * 0.72), "分析视频 \(Int(seconds)) / \(Int(duration)) 秒 · 已选 \(keys.count) 个关键帧") }
             if let previous = last {
-                switch VideoVision.alignment(previous, frame, upward: upward) {
+                // Automatic input runs at 300 logical points/sec. A conservative
+                // bound rejects a separator beyond the controller's possible motion.
+                let limit = maximumPixelsPerSecond.map { max(8, Int(ceil(max(0, seconds - previous.seconds) * $0)) + 8) }
+                switch VideoVision.alignment(previous, frame, upward: upward, maximumShift: limit) {
                 case .unchanged:
                     unresolvedSince = nil
+                    last = frame
                     // A still, sharper ending frame is useful without accumulating false motion.
                     if let candidate = finalCandidate, candidate.position == position, frame.sharpness > candidate.frame.sharpness {
                         finalCandidate = (frame, position)
@@ -245,6 +277,12 @@ enum VideoEngine {
                     lastGoodTime = seconds
                 case .shifted(let shift):
                     unresolvedSince = nil
+                    // Keep a bridge before a large step; choosing only the sharpest older
+                    // candidate can otherwise leave the next keyframe without overlap.
+                    if position > anchorTrack && position + shift - anchorTrack > frame.image.height * 65 / 100 {
+                        do { try commit(previous, trackPosition: position) }
+                        catch { warning = error.localizedDescription; stoppedForGap = true; break }
+                    }
                     position += shift; last = frame; lastGoodTime = seconds
                     finalCandidate = (frame, position)
                     let distance = position - anchorTrack
@@ -338,6 +376,9 @@ enum VideoEngine {
         var report = VideoReport(direction: upward ? "up" : "down", sourceDuration: duration, analyzedFrames: frameCount, keyFrames: keys, seamRows: seams,
                                  recognizedTextRegions: boxes.reduce(0) { $0 + $1.count }, width: result.width, height: result.height, warning: warning)
         report.scrollingCrop = crop
+        report.verifiedThrough = lastGoodTime
+        report.cropAdjustment = cropAdjustment
+        report.maximumPixelsPerSecond = maximumPixelsPerSecond
         if includeFixed, let cover = fixedCover, let crop {
             report.fixedTopHeight = Int(crop.minY)
             report.fixedBottomHeight = cover.height - Int(crop.maxY)

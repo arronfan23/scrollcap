@@ -8,13 +8,24 @@
 
 Fixed header once. Scrolling content in order. Fixed input bar once.
 
-[Download](https://github.com/arronfan23/scrollcap/releases/latest) · [简体中文](README.md) · [User guide](docs/USER_GUIDE.zh-CN.md) · [Report an issue](https://github.com/arronfan23/scrollcap/issues/new/choose)
+[Download](https://github.com/arronfan23/scrollcap/releases/latest) · [Watch demo](#demo-video) · [简体中文](README.md) · [User guide](docs/USER_GUIDE.zh-CN.md) · [Report an issue](https://github.com/arronfan23/scrollcap/issues/new/choose)
 
 </div>
 
 ScrollCap is a native macOS screenshot utility by SMO. Capture a region and keep the image in place, annotate it and pin it above other windows, or create long screenshots of web pages and chat windows. Scrolling capture selects sharp frames, aligns overlapping content and uses Apple Vision text recognition to help place seams away from text. Processing stays on your Mac; output text comes from the source pixels.
 
+## Demo video
+
+A 32-second introduction to scrolling capture, fixed regions, annotations, pinning and editable local history. Chinese narration, 1080p.
+
+https://github.com/user-attachments/assets/8d987714-bbbc-4fe4-ac2a-9776adf0286f
+
+<details>
+<summary>View the app interface</summary>
+
 ![ScrollCap 2.6 native screenshot history, shown with synthetic test content](docs/images/app.png)
+
+</details>
 
 ## Features
 

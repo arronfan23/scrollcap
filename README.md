@@ -13,7 +13,7 @@
 [![License](https://img.shields.io/badge/License-MIT-0D9488)](LICENSE)
 [![Build](https://github.com/arronfan23/scrollcap/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/arronfan23/scrollcap/actions/workflows/ci.yml)
 
-[下载安装包](https://github.com/arronfan23/scrollcap/releases/latest) · [使用指南](docs/USER_GUIDE.zh-CN.md) · [English](README.en.md) · [反馈问题](https://github.com/arronfan23/scrollcap/issues/new/choose)
+[下载安装包](https://github.com/arronfan23/scrollcap/releases/latest) · [观看介绍](#介绍视频) · [使用指南](docs/USER_GUIDE.zh-CN.md) · [English](README.en.md) · [反馈问题](https://github.com/arronfan23/scrollcap/issues/new/choose)
 
 </div>
 
@@ -21,7 +21,18 @@
 
 ScrollCap 是 SMO 出品的原生 macOS 截图工具。普通截图拖动框选即可完成，支持裁剪和置顶；长截图适合网页、聊天记录和带固定标题栏的窗口，连续采集后选择清晰帧、匹配重叠内容，并用 Apple Vision 识别文字位置，优先在空白处接缝。全部处理在本机完成。
 
+## 介绍视频
+
+32 秒了解 ScrollCap：完整长截图、固定区域保留、截图标注与置顶，以及可继续编辑的本机历史。中文配音，1080p。
+
+https://github.com/user-attachments/assets/8d987714-bbbc-4fe4-ac2a-9776adf0286f
+
+<details>
+<summary>查看软件界面</summary>
+
 ![ScrollCap 2.6 原生历史截图界面，使用合成测试内容](docs/images/app.png)
+
+</details>
 
 ## 功能
 
